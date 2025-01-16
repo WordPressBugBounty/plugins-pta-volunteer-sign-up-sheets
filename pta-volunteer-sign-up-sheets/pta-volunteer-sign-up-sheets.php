@@ -3,13 +3,14 @@
 Plugin Name: Volunteer Sign Up Sheets
 Plugin URI: http://wordpress.org/plugins/pta-volunteer-sign-up-sheets
 Description: Volunteer Sign Up Sheets and Management from Stephen Sherrard Plugins
-Version: 4.6.1
+Version: 5.0.0
 Author: Stephen Sherrard
 Author URI: https://stephensherrardplugins.com
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: pta-volunteer-sign-up-sheets
 Domain Path: /languages
+Requires PHP: 7.4
 */
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
@@ -19,7 +20,7 @@ if (!defined('PTA_VOLUNTEER_SUS_VERSION_KEY'))
     define('PTA_VOLUNTEER_SUS_VERSION_KEY', 'pta_volunteer_sus_version');
 
 if (!defined('PTA_VOLUNTEER_SUS_VERSION_NUM'))
-    define('PTA_VOLUNTEER_SUS_VERSION_NUM', '4.6.1');
+    define('PTA_VOLUNTEER_SUS_VERSION_NUM', '5.0.0');
 
 if (!defined('PTA_VOLUNTEER_SUS_DIR'))
 	define('PTA_VOLUNTEER_SUS_DIR', plugin_dir_path( __FILE__ ) );
@@ -39,10 +40,11 @@ if(!class_exists('PTA_Sign_Up_Sheet')):
 class PTA_Sign_Up_Sheet {
 	
     public $data;
-    public $public = false;
+    public $public = null;
     public $emails;
-    public $db_version = '3.3.0';
+    public $db_version = '4.0.0';
     public $main_options;
+	public $validation_options;
     public $admin = null;
     
     public function __construct() {
@@ -53,13 +55,14 @@ class PTA_Sign_Up_Sheet {
         register_deactivation_hook( __FILE__, array($this, 'deactivate'));
 
         $this->main_options = get_option( 'pta_volunteer_sus_main_options' );
+	    $this->validation_options = get_option( 'pta_volunteer_sus_validation_options' );
     }
 
     public function init_hooks() {
 	    add_action('pta_sus_cron_job', array($this, 'cron_functions'));
 
 	    add_action('plugins_loaded', array($this, 'init'));
-	    add_action('init', array($this, 'public_init' ));
+	    add_action('plugins_loaded', array($this, 'public_init' ));
 
 	    add_action( 'init', array($this, 'block_assets' ));
 
@@ -77,6 +80,10 @@ class PTA_Sign_Up_Sheet {
 				add_action('init', array($this->admin, 'init_admin_hooks'));
 		    }
 	    }
+	    if (!class_exists('PTA_SUS_Public')) {
+		    include_once(dirname(__FILE__).'/classes/class-pta_sus_public.php');
+	    }
+
     }
 
     public function register_scripts() {
@@ -178,7 +185,7 @@ class PTA_Sign_Up_Sheet {
 	/**
 	 * Get html output of a single sheet
 	 *
-	 * @param $id ID of sheet to display
+	 * @param int $id the ID of sheet to display
 	 *
 	 * @return string html output of sheet and all tasks
 	 */
@@ -204,10 +211,7 @@ class PTA_Sign_Up_Sheet {
 	 */
 	public function get_signup_form($task_id, $date, $skip_filled_check = false) {
 		if(!is_object($this->public)) {
-			if (!class_exists('PTA_SUS_Public')) {
-				include_once(dirname(__FILE__).'/classes/class-pta_sus_public.php');
-			}
-			$this->public = new PTA_SUS_Public();
+			return '';
 		}
 		return $this->public->display_signup_form($task_id, $date, $skip_filled_check);
 	}
@@ -218,6 +222,7 @@ class PTA_Sign_Up_Sheet {
 
 
     public function cron_functions() {
+		pta_logToFile(__('Beginning hourly CRON job', 'pta-volunteer-sign-up-sheets'));
         // Let other plugins hook into our hourly cron job
         do_action( 'pta_sus_hourly_cron' );
 
@@ -228,40 +233,78 @@ class PTA_Sign_Up_Sheet {
 	    $to = get_bloginfo( 'admin_email' );
 	    $subject = __("Volunteer Signup Housekeeping Completed!", 'pta-volunteer-sign-up-sheets');
 		$message = '';
-		$send_mail = false;
+		$send_mail = $this->main_options['enable_cron_notifications'];
 
 	    // If automatic clearing of expired signups is enabled, run the check
 	    if($this->main_options['clear_expired_sheets']) {
 		    $results = $this->data->delete_expired_sheets();
-		    if($results && $this->main_options['enable_cron_notifications']) {
-			    $message = __("Volunteer signup sheet CRON job has been completed.", 'pta-volunteer-sign-up-sheets')."\n\n" .
+		    if($results) {
+			    $message .= __("Volunteer signup sheet CRON job has been completed.", 'pta-volunteer-sign-up-sheets')."\n\n" .
 			               sprintf(__("%d expired sheets were deleted.", 'pta-volunteer-sign-up-sheets'), (int)$results) . "\n\n";
-			    $send_mail = true;
 		    }
 	    }
 
 		// If automatic clearing of expired signups is enabled, run the check
         if($this->main_options['clear_expired_signups']) {
             $results = $this->data->delete_expired_signups();
-            if($results && $this->main_options['enable_cron_notifications']) {
+            if($results) {
                 $message .= __("Volunteer signup sheet CRON job has been completed.", 'pta-volunteer-sign-up-sheets')."\n\n" .
                             sprintf(__("%d expired signups were deleted.", 'pta-volunteer-sign-up-sheets'), (int)$results) . "\n\n";
-                $send_mail = true;
             }
         }
 
-		if($send_mail) {
-			wp_mail($to, $subject, $message);
+		if(isset($this->validation_options['enable_validation']) && $this->validation_options['enable_validation']) {
+			// purge expired validation codes and unvalidated signups
+			$results = pta_delete_expired_validation_codes();
+			if($results) {
+				$message .= $results."\n\n";
+			}
+			// purge unvalidated signups
+			$results = pta_delete_unvalidated_signups();
+			if($results) {
+				$message .= $results."\n\n";
+			}
 		}
+
+		$message .= apply_filters('pta_sus_cron_message', '');
+
+		if(!empty($message)) {
+			pta_logToFile($message);
+			if($send_mail) {
+				wp_mail($to, $subject, $message);
+			}
+		}
+	    pta_logToFile(__('Finished hourly CRON job', 'pta-volunteer-sign-up-sheets'));
+
+	    $last_log_clear = get_option('pta_sus_last_log_clear', 0);
+	    $clear_interval = 30 * DAY_IN_SECONDS; // 30 days
+
+	    if (time() - $last_log_clear >= $clear_interval) {
+		    $upload_dir = wp_upload_dir();
+		    $log_dir = $upload_dir['basedir'] . '/pta-logs';
+
+		    if (is_dir($log_dir)) {
+			    $log_files = glob($log_dir . '/*.log');
+			    foreach ($log_files as $log_file) {
+				    $filename = basename($log_file);
+				    pta_clear_log_file($filename);
+			    }
+		    }
+
+		    update_option('pta_sus_last_log_clear', time());
+	    }
+
 
     }
 
     public function public_init() {
+	    if (strpos($_SERVER['REQUEST_URI'], 'favicon.ico') !== false) {
+		    return;
+	    }
     	if(!is_admin() || wp_doing_ajax()) {
-		    if (!class_exists('PTA_SUS_Public')) {
-			    include_once(dirname(__FILE__).'/classes/class-pta_sus_public.php');
+		    if($this->public === null) {
+			    $this->public = new PTA_SUS_Public();
 		    }
-		    $this->public = new PTA_SUS_Public();
 	    }
     }
 
@@ -459,6 +502,44 @@ Thank You!
             }
         }
         update_option( 'pta_volunteer_sus_integration_options', $options );
+
+		// VALIDATION OPTIONS
+	    $signup_validation_template = "
+Please click on, or copy and paste, the link below to validate your signup:
+{validation_link}
+	    ";
+	    $user_validation_template = "
+Please click on, or copy and paste, the link below to validate yourself:
+{validation_link}
+	    ";
+	    $defaults = array(
+		    'enable_validation' => false,
+			'require_validation_to_view' => false,
+		    'enable_signup_validation' => true,
+		    'signup_expiration_hours' => 1,
+		    'signup_validation_email_subject' =>'Your Sign Up Validation Link',
+		    'signup_validation_email_template' => $signup_validation_template,
+		    'validation_code_expiration_hours' => 48,
+		    'user_validation_email_subject' =>'Your Validation Link',
+		    'user_validation_email_template' => $user_validation_template,
+			'validation_form_header' => 'To view and manage your signups you must either login or fill out the form below to receive a validation link via email.',
+		    'enable_user_validation_form' => true,
+		    'validation_form_resubmission_minutes' => 1,
+		    'validation_required_message' => 'You must be validated to view this page.',
+		    'validation_page_link_text' => 'Go to the validation form',
+		    'validation_page_id' => 0,
+		    'enable_clear_validation' => true,
+		    'clear_validation_message' => 'Use the link below to clear the validation info from your browser. You should do this on public computers, or if you need to validate again as a spouse or family member using a different name or email.',
+		    'clear_validation_link_text' => 'Clear Validation',
+	    );
+	    $options = get_option( 'pta_volunteer_sus_validation_options', $defaults );
+	    // Make sure each option is set -- this helps if new options have been added during plugin upgrades
+	    foreach ($defaults as $key => $value) {
+		    if(!isset($options[$key])) {
+			    $options[$key] = $value;
+		    }
+	    }
+	    update_option( 'pta_volunteer_sus_validation_options', $options );
     }
 
       
@@ -567,10 +648,21 @@ Thank You!
             reminder2_sent BOOL NOT NULL DEFAULT FALSE,
             item_qty INT NOT NULL DEFAULT 1,
             ts INT NULL DEFAULT NULL,
+            validated BOOLEAN NOT NULL DEFAULT TRUE,
             PRIMARY KEY id (id),
             KEY `task_id` (`task_id`),
             KEY `date` (`date`),
             KEY `user_id` (`user_id`)
+        ) $charset_collate;";
+		$validation_codes = $wpdb->prefix.'pta_sus_validation_codes';
+	    $sql .= "CREATE TABLE {$validation_codes} (
+            id INT NOT NULL AUTO_INCREMENT,
+            firstname VARCHAR(100),
+            lastname VARCHAR(100),
+            email VARCHAR(100),
+            code VARCHAR(200),
+        	ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY id (id)
         ) $charset_collate;";
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
@@ -635,118 +727,114 @@ Thank You!
 	/**
 	 * Enqueue Gutenberg block assets for both frontend + backend.
 	 *
-	 * Assets enqueued:
-	 * 1. blocks.style.build.css - Frontend + Backend.
-	 * 2. blocks.build.js - Backend.
-	 * 3. blocks.editor.build.css - Backend.
-	 *
-	 * @uses {wp-blocks} for block type registration & related functions.
-	 * @uses {wp-element} for WP Element abstraction — structure of blocks.
-	 * @uses {wp-i18n} to internationalize the block's text.
-	 * @uses {wp-editor} for WP editor styles.
-	 * @since 1.0.0
 	 */
-	public function block_assets() { // phpcs:ignore
-		if(!function_exists( 'register_block_type')) return;
-		// Register block styles for both frontend + backend.
-		wp_register_style(
-			'pta_volunteer_sus_block-style-css', // Handle.
-			plugins_url( 'blocks/blocks.style.build.css', __FILE__  ), // Block style CSS.
-			array( 'wp-editor' ), // Dependency to include the CSS after it.
-			null // filemtime( plugin_dir_path( __DIR__ ) . 'dist/blocks.style.build.css' ) // Version: File modification time.
-		);
+	public function block_assets() {
+		register_block_type( __DIR__ . '/blocks/signup-sheet/block.json', array(
+			'render_callback' => array( $this, 'render_volunteer_signup_block' )
+		) );
 
-		// Register block editor script for backend.
-		wp_register_script(
-			'pta_volunteer_sus_block-block-js', // Handle.
-			plugins_url( 'blocks/blocks.build.js', __FILE__  ), // Block.build.js: We register the block here. Built with Webpack.
-			array( 'wp-blocks', 'wp-i18n', 'wp-element', 'wp-editor' ), // Dependencies, defined above.
-			null, // filemtime( plugin_dir_path( __DIR__ ) . 'dist/blocks.build.js' ), // Version: filemtime — Gets file modification time.
-			true // Enqueue the script in the footer.
-		);
+		register_block_type( __DIR__ . '/blocks/user-signups/block.json', array(
+			'render_callback' => array( $this, 'render_user_signups_block' )
+		) );
 
-		// Register block editor styles for backend.
-		wp_register_style(
-			'pta_volunteer_sus_block-block-editor-css', // Handle.
-			plugins_url( 'blocks/blocks.editor.build.css', __FILE__  ), // Block editor CSS.
-			array( 'wp-edit-blocks' ), // Dependency to include the CSS after it.
-			null // filemtime( plugin_dir_path( __DIR__ ) . 'dist/blocks.editor.build.css' ) // Version: File modification time.
-		);
+		register_block_type( __DIR__ . '/blocks/upcoming-events/block.json', array(
+			'render_callback' => array( $this, 'render_upcoming_events_block' )
+		) );
 
-		/**
-		 * Register Gutenberg block on server-side.
-		 *
-		 * Register the block on server-side to ensure that the block
-		 * scripts and styles for both frontend and backend are
-		 * enqueued when the editor loads.
-		 *
-		 * @link https://wordpress.org/gutenberg/handbook/blocks/writing-your-first-block-type#enqueuing-block-scripts
-		 * @since 1.16.0
-		 */
-		register_block_type(
-			'pta-volunteer-sus-block/block-pta-volunteer-sus-block', array(
-				// Enqueue blocks.style.build.css on both frontend & backend.
-				'style'         => 'pta_volunteer_sus_block-style-css',
-				// Enqueue blocks.build.js in the editor only.
-				'editor_script' => 'pta_volunteer_sus_block-block-js',
-				// Enqueue blocks.editor.build.css in the editor only.
-				'editor_style'  => 'pta_volunteer_sus_block-block-editor-css',
-				'attributes' => [
-					'id' => [
-						'type' => 'text',
-						'default' => ''
-					],
-					'date' => [
-						'type' => 'text',
-						'default' => ''
-					],
-					'group' => [
-						'type' => 'text',
-						'default' => ''
-					],
-					'list_title' => [
-						'type' => 'text',
-						'default' => ''
-					],
-					'show_headers' => [
-						'type' => 'text',
-						'default' => 'yes'
-					],
-					'show_time' => [
-						'type' => 'text',
-						'default' => 'yes'
-					],
-					'show_phone' => [
-						'type' => 'text',
-						'default' => 'no'
-					],
-					'show_email' => [
-						'type' => 'text',
-						'default' => 'no'
-					],
-					'show_date_start' => [
-						'type' => 'text',
-						'default' => 'no'
-					],
-					'show_date_end' => [
-						'type' => 'text',
-						'default' => 'no'
-					],
-					'order_by' => [
-						'type' => 'text',
-						'default' => 'first_date'
-					],
-					'order' => [
-						'type' => 'text',
-						'default' => 'ASC'
-					]
-				]
-			)
-		);
+		register_block_type( __DIR__ . '/blocks/validation-form/block.json', array(
+			'render_callback' => array( $this, 'render_validation_form_block' )
+		) );
+
 	}
-	
+
+	public function render_volunteer_signup_block( $attributes ) {
+		$shortcode_atts = array(
+			'id' => $attributes['id'] ?? '',
+			'date' => $attributes['date'] ?? '',
+			'group' => $attributes['group'] ?? '',
+			'list_title' => $attributes['list_title'] ?? '',
+			'show_headers' => $attributes['show_headers'] ?? 'yes',
+			'show_time' => $attributes['show_time'] ?? 'yes',
+			'show_phone' => $attributes['show_phone'] ?? 'no',
+			'show_email' => $attributes['show_email'] ?? 'no',
+			'order_by' => $attributes['order_by'] ?? 'first_date',
+			'order' => $attributes['order'] ?? 'ASC'
+		);
+
+		$shortcode = '[pta_sign_up_sheet';
+		foreach ($shortcode_atts as $key => $value) {
+			if (!empty($value)) {
+				$shortcode .= ' ' . $key . '="' . esc_attr($value) . '"';
+			}
+		}
+		$shortcode .= ']';
+
+		return do_shortcode($shortcode);
+	}
+
+	public function render_user_signups_block($attributes) {
+		$shortcode_atts = array(
+			'show_time' => $attributes['show_time'] ?? 'yes'
+		);
+
+		$shortcode = '[pta_user_signups';
+		foreach ($shortcode_atts as $key => $value) {
+			if (!empty($value)) {
+				$shortcode .= ' ' . $key . '="' . esc_attr($value) . '"';
+			}
+		}
+		$shortcode .= ']';
+
+		return do_shortcode($shortcode);
+	}
+
+	public function render_upcoming_events_block($attributes) {
+		$widget = new PTA_SUS_Widget();
+
+		$widget_args = array(
+			'before_widget' => '',
+			'after_widget' => '',
+			'before_title' => '<h2>',
+			'after_title' => '</h2>'
+		);
+
+		$instance = array(
+			'title' => $attributes['title'] ?? 'Current Volunteer Opportunities',
+			'num_items' => $attributes['num_items'] ?? 10,
+			'show_what' => $attributes['show_what'] ?? 'both',
+			'sort_by' => $attributes['sort_by'] ?? 'first_date',
+			'order' => $attributes['order'] ?? 'ASC',
+			'list_class' => $attributes['list_class'] ?? ''
+		);
+
+		ob_start();
+		$widget->widget($widget_args, $instance);
+		return ob_get_clean();
+	}
+
+	public function render_validation_form_block($attributes) {
+		// For block editor preview and REST requests
+		if (defined('REST_REQUEST') && REST_REQUEST || is_admin()) {
+			return pta_get_validation_form();
+		}
+
+		// For frontend rendering
+		if (!isset($this->public)) {
+			if (!class_exists('PTA_SUS_Public')) {
+				include_once(dirname(__FILE__).'/classes/class-pta_sus_public.php');
+			}
+			$this->public = new PTA_SUS_Public();
+		}
+		return $this->public->process_validation_form_shortcode($attributes);
+	}
+
+
 }
-	
+
+require_once(dirname(__FILE__).'/pta-sus-global-functions.php');
+require_once(dirname(__FILE__).'/classes/class-pta_sus_messages.php');
+require_once(dirname(__FILE__).'/classes/class-pta_sus_volunteer.php');
+require_once(dirname(__FILE__).'/classes/class-pta_sus_signup_functions.php');
 global $pta_sus;
 $pta_sus = new PTA_Sign_Up_Sheet();
 $pta_sus->init_hooks();
@@ -858,17 +946,5 @@ function pta_sus_user_data_eraser( $email_address, $page = 1 ) {
 		'messages'       => $messages,
 		'done'           => true,
 	);
-}
-
-if(!function_exists( 'pta_datetime')) {
-	function pta_datetime($format, $timestamp) {
-		$main_options = get_option( 'pta_volunteer_sus_main_options' );
-	    if(isset($main_options['disable_datei18n']) && true == $main_options['disable_datei18n']) {
-	        $datetime = date($format, $timestamp);
-	    } else {
-	        $datetime = date_i18n( $format, $timestamp);
-	    }
-	    return apply_filters('pta_sus_datetime', $datetime, $format, $timestamp);
-	}
 }
 /* EOF */
