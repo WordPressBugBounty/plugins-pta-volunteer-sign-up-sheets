@@ -3,7 +3,7 @@
 Plugin Name: Volunteer Sign Up Sheets
 Plugin URI: http://wordpress.org/plugins/pta-volunteer-sign-up-sheets
 Description: Volunteer Sign Up Sheets and Management from Stephen Sherrard Plugins
-Version: 5.3.1
+Version: 5.4.0
 Author: Stephen Sherrard
 Author URI: https://stephensherrardplugins.com
 License: GPLv2 or later
@@ -20,7 +20,7 @@ if (!defined('PTA_VOLUNTEER_SUS_VERSION_KEY'))
     define('PTA_VOLUNTEER_SUS_VERSION_KEY', 'pta_volunteer_sus_version');
 
 if (!defined('PTA_VOLUNTEER_SUS_VERSION_NUM'))
-    define('PTA_VOLUNTEER_SUS_VERSION_NUM', '5.3.1');
+    define('PTA_VOLUNTEER_SUS_VERSION_NUM', '5.4.0');
 
 if (!defined('PTA_VOLUNTEER_SUS_DIR'))
 	define('PTA_VOLUNTEER_SUS_DIR', plugin_dir_path( __FILE__ ) );
@@ -61,7 +61,7 @@ class PTA_Sign_Up_Sheet {
     public function init_hooks() {
 	    add_action('pta_sus_cron_job', array($this, 'cron_functions'));
 
-	    add_action('plugins_loaded', array($this, 'init'));
+	    add_action('init', array($this, 'init'));
 	    add_action('plugins_loaded', array($this, 'public_init' ));
 
 	    add_action( 'init', array($this, 'block_assets' ));
@@ -83,7 +83,6 @@ class PTA_Sign_Up_Sheet {
 	    if (!class_exists('PTA_SUS_Public')) {
 		    include_once(dirname(__FILE__).'/classes/class-pta_sus_public.php');
 	    }
-
     }
 
     public function register_scripts() {
@@ -844,8 +843,11 @@ Please click on, or copy and paste, the link below to validate yourself:
 require_once(dirname(__FILE__).'/pta-sus-global-functions.php');
 require_once(dirname(__FILE__).'/classes/class-pta_sus_messages.php');
 require_once(dirname(__FILE__).'/classes/class-pta_sus_template_tags.php');
+require_once(dirname(__FILE__).'/classes/class-pta_sus_template_tags_helper.php');
 require_once(dirname(__FILE__).'/classes/class-pta_sus_volunteer.php');
 require_once(dirname(__FILE__).'/classes/class-pta_sus_signup_functions.php');
+require_once(dirname(__FILE__).'/classes/class-pta_sus_text_registry.php');
+
 global $pta_sus;
 $pta_sus = new PTA_Sign_Up_Sheet();
 $pta_sus->init_hooks();

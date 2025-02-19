@@ -162,6 +162,15 @@ This alone will not make your site GDPR compliant. You will need to study up on 
 If your site is going to be affected by GDPR, then you should contact a lawyer to make sure you do everything needed to be in compliance.
 
 == Changelog ==
+**Version 5.4.0**
+*   Add a Template Tags Helper feature, and class, to help with the creation of template tags for use in email templates. Extensions can also register their own template tags with the class.
+*   The Template Tags helper will appear at the top right of admin pages where you create email templates, and allow you to quickly search template tags and copy them to the clipboard just by clicking on them. Extensions will be updated after this to add their own template tags.
+*   All the new public text strings for the validation system, as well as some previously unregistered text strings, are now registered with the new text registry class in version 4.0.0 of the Customizer extension.
+*   Fix for {contact_emails} template tag always returning "N/A".
+*   Changed the "# Needed" field on the add/edit Tasks page to be a number input instead of a text input, now that all modern browsers support number inputs.
+*   Updated and modernized the javascript for adding/removing task rows on the Add/Edit Tasks page.
+*   Tested with PHP 8.4.2 and WordPress 6.7.2
+
 **Version 5.3.1**
 *   Fixed the {validation_link} template tag for signup validation emails which was broken in 5.3.0 after separating out the email template tag functions into its own separate class.
 *   Tested with PHP 8.4.2 and WordPress 6.7.2
