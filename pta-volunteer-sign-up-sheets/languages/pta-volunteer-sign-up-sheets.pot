@@ -2,7 +2,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PTA Volunteer Sign Up Sheets\n"
-"POT-Creation-Date: 2025-02-19 13:14-0800\n"
+"POT-Creation-Date: 2025-02-21 14:38-0800\n"
 "PO-Revision-Date: 2016-02-09 19:42-0800\n"
 "Last-Translator: Stephen Sherrard <stephen@dbar-productions.com>\n"
 "Language-Team: Stephen Sherrard <stephen@dbar-productions.com>\n"
@@ -366,7 +366,7 @@ msgstr ""
 
 #: classes/admin-view-all-signups-html.php:19
 #: classes/admin-view-signups-html.php:19
-#: classes/class-pta_sus_template_tags_helper.php:41
+#: classes/class-pta_sus_template_tags_helper.php:66
 msgid "Task Description"
 msgstr ""
 
@@ -2302,7 +2302,7 @@ msgstr ""
 #: classes/class-pta_sus_options.php:1281
 #: classes/class-pta_sus_options.php:1295
 #: classes/class-pta_sus_options.php:1309
-msgid "Available Template Tags: "
+msgid "Template Tags are allowed. Use the Template Tags helper in upper right."
 msgstr ""
 
 #: classes/class-pta_sus_options.php:1242
@@ -2374,11 +2374,13 @@ msgid ""
 msgstr ""
 
 #: classes/class-pta_sus_public.php:136
-#: classes/class-pta_sus_template_tags.php:71
-#: classes/class-pta_sus_template_tags.php:72
-#: classes/class-pta_sus_template_tags.php:73
-#: classes/class-pta_sus_template_tags.php:78
-#: classes/class-pta_sus_template_tags.php:83 classes/list-table.php:66
+#: classes/class-pta_sus_template_tags.php:55
+#: classes/class-pta_sus_template_tags.php:56
+#: classes/class-pta_sus_template_tags.php:84
+#: classes/class-pta_sus_template_tags.php:85
+#: classes/class-pta_sus_template_tags.php:111
+#: classes/class-pta_sus_template_tags.php:112
+#: classes/class-pta_sus_template_tags.php:119 classes/list-table.php:66
 #: classes/list-table.php:81
 msgid "N/A"
 msgstr ""
@@ -2758,86 +2760,116 @@ msgid "Sheet Title"
 msgstr ""
 
 #: classes/class-pta_sus_template_tags_helper.php:21
-msgid "Sheet - Program/Event Details"
+msgid "The First date of a sheet"
 msgstr ""
 
 #: classes/class-pta_sus_template_tags_helper.php:26
-msgid "Sheet Chair/Contact Email(s)"
+msgid "The Last date of a sheet"
 msgstr ""
 
 #: classes/class-pta_sus_template_tags_helper.php:31
-msgid "Sheet Chair/Contact Name(s)"
+msgid "Sheet - Program/Event Details"
 msgstr ""
 
 #: classes/class-pta_sus_template_tags_helper.php:36
-msgid "Task Title"
+msgid "The number of filled spots for a sheet"
+msgstr ""
+
+#: classes/class-pta_sus_template_tags_helper.php:41
+msgid "The number of open spots for a sheet"
 msgstr ""
 
 #: classes/class-pta_sus_template_tags_helper.php:46
-msgid "Task/Signup Date"
+msgid ""
+"Links to Volunteer Page set in main settings, with URL argument to show the "
+"specific sheet."
 msgstr ""
 
 #: classes/class-pta_sus_template_tags_helper.php:51
-msgid "Task Start Time"
+msgid "Sheet Chair/Contact Email(s)"
 msgstr ""
 
 #: classes/class-pta_sus_template_tags_helper.php:56
-msgid "Task End Time"
+msgid "Sheet Chair/Contact Name(s)"
 msgstr ""
 
 #: classes/class-pta_sus_template_tags_helper.php:61
-msgid "Task/Item Details"
-msgstr ""
-
-#: classes/class-pta_sus_template_tags_helper.php:66
-msgid "Signup First Name"
+msgid "Task Title"
 msgstr ""
 
 #: classes/class-pta_sus_template_tags_helper.php:71
-msgid "Signup Last Name"
+msgid "Task/Signup Date"
 msgstr ""
 
-#: classes/class-pta_sus_template_tags_helper.php:76 classes/data.php:780
-msgid "Signup Email"
+#: classes/class-pta_sus_template_tags_helper.php:76
+msgid "Task Start Time"
 msgstr ""
 
-#: classes/class-pta_sus_template_tags_helper.php:81 classes/data.php:784
-msgid "Signup Phone"
+#: classes/class-pta_sus_template_tags_helper.php:81
+msgid "Task End Time"
 msgstr ""
 
 #: classes/class-pta_sus_template_tags_helper.php:86
-msgid "Signup Task/Item Details"
+msgid "Task/Item Details"
 msgstr ""
 
 #: classes/class-pta_sus_template_tags_helper.php:91
-msgid "Signup Task/Item Quantity"
+msgid "The number of filled spots for a task"
 msgstr ""
 
 #: classes/class-pta_sus_template_tags_helper.php:96
-msgid "Site Name"
+msgid "The number of open spots for a task"
 msgstr ""
 
 #: classes/class-pta_sus_template_tags_helper.php:101
-msgid "Signup URL"
+msgid "Signup First Name"
 msgstr ""
 
 #: classes/class-pta_sus_template_tags_helper.php:106
+msgid "Signup Last Name"
+msgstr ""
+
+#: classes/class-pta_sus_template_tags_helper.php:111 classes/data.php:780
+msgid "Signup Email"
+msgstr ""
+
+#: classes/class-pta_sus_template_tags_helper.php:116 classes/data.php:784
+msgid "Signup Phone"
+msgstr ""
+
+#: classes/class-pta_sus_template_tags_helper.php:121
+msgid "Signup Task/Item Details"
+msgstr ""
+
+#: classes/class-pta_sus_template_tags_helper.php:126
+msgid "Signup Task/Item Quantity"
+msgstr ""
+
+#: classes/class-pta_sus_template_tags_helper.php:131
+msgid "Site Name"
+msgstr ""
+
+#: classes/class-pta_sus_template_tags_helper.php:136
+msgid "Signup URL"
+msgstr ""
+
+#: classes/class-pta_sus_template_tags_helper.php:141
 msgid "Signup Expiration Hours - Signup Validation"
 msgstr ""
 
-#: classes/class-pta_sus_template_tags_helper.php:111
+#: classes/class-pta_sus_template_tags_helper.php:146
 msgid "Validation Code Expiration Hours - Site Validation"
 msgstr ""
 
-#: classes/class-pta_sus_template_tags_helper.php:119
+#: classes/class-pta_sus_template_tags_helper.php:154
 msgid "Template Tags"
 msgstr ""
 
-#: classes/class-pta_sus_template_tags_helper.php:125
+#: classes/class-pta_sus_template_tags_helper.php:160
 msgid "Search template tags..."
 msgstr ""
 
-#: classes/class-pta_sus_template_tags_helper.php:127
+#: classes/class-pta_sus_template_tags_helper.php:162
 msgid "Click on a tag to copy to your clipboard."
 msgstr ""
 
