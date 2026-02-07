@@ -1,12 +1,21 @@
 <?php
 class PTA_SUS_Template_Tags_Helper {
 	private static $template_tags_registry = array();
+	private static $initialized = false;
 
 	public static function register_template_tag($tag, $description, $category = 'general') {
 		self::$template_tags_registry[$category][] = array(
 			'tag' => $tag,
 			'description' => $description
 		);
+	}
+
+	public static function setup() {
+		// Only hook init once
+		if (!self::$initialized) {
+			add_action('init', array(__CLASS__, 'init'), 5);
+			self::$initialized = true;
+		}
 	}
 
 	public static function init() {
@@ -67,9 +76,14 @@ class PTA_SUS_Template_Tags_Helper {
 			'Task'
 		);
 		self::register_template_tag(
-			'{date}',
-			__('Task/Signup Date','pta-volunteer-sign-up-sheets'),
+			'{task_date}',
+			__('Task date, or list of dates for Recurring Sheets where tasks have more than one date.','pta-volunteer-sign-up-sheets'),
 			'Task'
+		);
+		self::register_template_tag(
+			'{date}',
+			__('Signup Date','pta-volunteer-sign-up-sheets'),
+			'Signup'
 		);
 		self::register_template_tag(
 			'{start_time}',
@@ -174,4 +188,4 @@ class PTA_SUS_Template_Tags_Helper {
 		echo '</div></div>';
 	}
 }
-PTA_SUS_Template_Tags_Helper::init();
+// The init will be called later after translations are loaded

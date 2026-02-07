@@ -64,7 +64,8 @@ class PTA_SUS_Public {
 	private $processed = false;
     
     public function __construct() {
-        $this->data = new PTA_SUS_Data();
+		global $pta_sus;
+        $this->data = $pta_sus->data;
 
         $this->all_sheets_uri = add_query_arg(array('sheet_id' => false, 'date' => false, 'signup_id' => false, 'task_id' => false));
 
@@ -73,10 +74,6 @@ class PTA_SUS_Public {
 	    $this->integration_options = get_option( 'pta_volunteer_sus_integration_options' );
 	    $this->validation_options = get_option( 'pta_volunteer_sus_validation_options' );
 		$this->validation_enabled = isset($this->validation_options['enable_validation']) && $this->validation_options['enable_validation'];
-        
-        add_action('wp_enqueue_scripts', array($this, 'add_css_and_js_to_frontend'));
-
-        add_action('init', array($this, 'init'));
         
         $this->phone_required = $this->main_options['phone_required'] ?? true;
 	    $this->use_divs = $this->main_options['use_divs'] ?? false;
@@ -296,7 +293,7 @@ class PTA_SUS_Public {
 			|| empty($posted['signup_email'])
 			|| empty($posted['signup_validate_email'])
 			|| ( ! $this->main_options['no_phone'] && empty($posted['signup_phone']) && $this->phone_required)
-			|| ("YES" == $task->need_details && $details_required && empty($posted['signup_item']) )
+			|| ("YES" == $task->need_details && $details_required && '' === sanitize_text_field($posted['signup_item']) )
 			|| ("YES" == $task->enable_quantities && !isset($posted['signup_item_qty']))
 		) {
 			$this->err++;
@@ -370,7 +367,7 @@ class PTA_SUS_Public {
 		return $this->validate_signup_form_fields($posted);
 	}
 
-	public function add_signup($posted, $signup_task_id) {
+	public function add_signup($posted, $signup_task_id, $redirect = true) {
 		$validate_signups =  $this->validation_enabled && isset($this->validation_options['enable_signup_validation']) && $this->validation_options['enable_signup_validation'];
 		$posted['signup_validated'] = $validate_signups ? $this->volunteer->is_validated() : 1;
 		$needs_validation = ($this->validation_enabled && $validate_signups && !$this->volunteer->is_validated());
@@ -408,7 +405,9 @@ class PTA_SUS_Public {
 				}
 
 				// only redirect if not doing ajax - so we don't break calendar popup signups
-				if(!defined('DOING_AJAX')) {
+				// allow extension to bypass redirect
+				$redirect = apply_filters('pta_sus_public_redirect_after_signup', $redirect, $posted, $signup_task_id);
+				if($redirect && !defined('DOING_AJAX')) {
 					pta_clean_redirect();
 				} else {
 					return $signup_id;
@@ -430,6 +429,7 @@ class PTA_SUS_Public {
 	}
 
     public function process_signup_form() {
+		if(is_admin() && !wp_doing_ajax()) return;
         
         $this->submitted = (isset($_POST['pta_sus_form_mode']) && $_POST['pta_sus_form_mode'] == 'submitted');
         $this->err = 0;
@@ -841,9 +841,7 @@ class PTA_SUS_Public {
 			    $return .= '</tr>';
 		    }
 
-		    if($this->use_divs) {
-			    $return .= '</div>';
-		    } else {
+		    if(!$this->use_divs) {
 			    $return .= '</thead><tbody>';
 		    }
 		    
@@ -1532,7 +1530,7 @@ class PTA_SUS_Public {
 				ob_start();
 				include(PTA_VOLUNTEER_SUS_DIR.'views/task-view-table-rows-html.php');
 				$return .= ob_get_clean();
-				$return .= '</body></table>'; // close body and table
+				$return .= '</tbody></table>'; // close body and table
 			}
 
 			$return .= apply_filters( 'pta_sus_after_single_task_list', '', $task, $date );

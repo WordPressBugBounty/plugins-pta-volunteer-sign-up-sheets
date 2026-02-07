@@ -50,8 +50,7 @@ class PTA_SUS_Options {
             }
 	        ?>
             <form action="options.php" method="post">
-                <?php 
-
+                <?php
                 if ( 'main_options' == $active_tab ) {
                 	settings_fields('pta_volunteer_sus_main_options'); 
                 	do_settings_sections('pta_volunteer_sus_main'); 
@@ -68,7 +67,6 @@ class PTA_SUS_Options {
                     // Allow extensions to create their own tabs
                     do_action('pta_sus_extensions_settings_tabs', $active_tab);
                 }
-                       
                 submit_button();
                 ?>
             </form>

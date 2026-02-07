@@ -1028,7 +1028,7 @@ class PTA_SUS_Data
         $clean_fields['task_id'] = $task_id;
         // Set user from email if they weren't logged in and if there is an account with that email
         // if they were logged in and not manager, take the current wp id as value
-        if (is_user_logged_in() && !current_user_can('manage_signup_sheets')) {
+        if (empty($clean_fields['user_id']) && is_user_logged_in() && !current_user_can('manage_signup_sheets')) {
             $clean_fields['user_id'] = get_current_user_id();
         }
         if (!isset($clean_fields['user_id']) || empty($clean_fields['user_id'])) {
@@ -1256,6 +1256,9 @@ class PTA_SUS_Data
         foreach ($this->tables['sheet']['allowed_fields'] AS $field=>$nothing) {
             if ('title' == $field) {
                 $new_fields['sheet_title'] = $sheet['title'] . ' Copy';
+            } elseif('visible' == $field) {
+				// make copied sheets hidden until admin can edit them
+				$new_fields['sheet_visible'] = false;
             } else {
                 $new_fields['sheet_'.$field] = $sheet[$field];
             }
@@ -1319,6 +1322,9 @@ class PTA_SUS_Data
                 $new_fields['sheet_first_date'] = $first_date;
             } elseif('last_date' == $field) {
                 $new_fields['sheet_last_date'] = $last_date;
+            } elseif('visible' == $field) {
+	            // make copied sheets hidden until admin can edit them
+	            $new_fields['sheet_visible'] = false;
             } else {
                 $new_fields['sheet_'.$field] = $sheet[$field];
             }

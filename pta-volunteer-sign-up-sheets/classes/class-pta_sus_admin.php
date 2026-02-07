@@ -19,8 +19,8 @@ class PTA_SUS_Admin {
 	private $show_settings;
 
 	public function __construct() {
-		global $pta_sus_sheet_page_suffix;
-		$this->data = new PTA_SUS_Data();
+		global $pta_sus_sheet_page_suffix, $pta_sus;
+		$this->data = $pta_sus->data;
 		$this->options_page = new PTA_SUS_Options();
 
 		$this->main_options = get_option( 'pta_volunteer_sus_main_options' );
@@ -123,6 +123,7 @@ class PTA_SUS_Admin {
 				add_submenu_page($this->admin_settings_slug.'_sheets', __('CRON Functions', 'pta-volunteer-sign-up-sheets'), __('CRON Functions', 'pta-volunteer-sign-up-sheets'), 'manage_signup_sheets', $this->admin_settings_slug.'_cron', array($this, 'admin_reminders_page'));
 				add_submenu_page($this->admin_settings_slug.'_sheets', __('Add Ons', 'pta-volunteer-sign-up-sheets'), __('Add Ons', 'pta-volunteer-sign-up-sheets'), 'manage_signup_sheets', $this->admin_settings_slug.'_addons', array($this, 'admin_addons_page'));
 			}
+			add_submenu_page($this->admin_settings_slug.'_sheets', __('NOTICE!', 'pta-volunteer-sign-up-sheets'), __('NOTICE!', 'pta-volunteer-sign-up-sheets'), 'manage_signup_sheets', $this->admin_settings_slug.'_notice', array($this, 'notice_page'));
 			add_action( "load-$all_sheets", array( $this, 'screen_options' ) );
 		}
 	}
@@ -440,7 +441,7 @@ class PTA_SUS_Admin {
 		$required = $this->get_required_signup_fields( $task_id);
 		$error = false;
 		foreach($required as $field_key) {
-			if(empty($form_data[$field_key])) {
+			if('0' !== $form_data[$field_key] && empty($form_data[$field_key])) {
 				$error = true;
 				break;
 			}
@@ -646,7 +647,6 @@ class PTA_SUS_Admin {
                 if(!empty($new_tasks)) {
                     $this->queue_reschedule_emails($new_tasks);
                 }
-	            do_action( 'pta_sus_sheet_copied', $new_sheet_id);
             }
         }
 
@@ -674,7 +674,6 @@ class PTA_SUS_Admin {
                     if(!empty($new_tasks)) {
                         $this->queue_reschedule_emails($new_tasks);
                     }
-	                do_action( 'pta_sus_sheet_copied', $new_sheet_id);
                 }
             }
         }
@@ -1814,6 +1813,19 @@ class PTA_SUS_Admin {
 		}
 
 		return $messages;
+	}
+
+	public function notice_page() {
+		?>
+		<div class="wrap">
+            <h1>NOTICE! THIS VERSION IS NO LONGER SUPPORTED!</h1>
+            <p>The wordpress.org SVN repo had become corrupted in February 2025, and I was locked out from making any updates or changes for more than 6 months. In order to release bug fixes, and a minor security patch, I was forced to move the plugin to my own server and include the software licensing system and updater that I use for my paid extensions.</p>
+            <p>This last 5.5.9 version was uploaded when the plugin team at wordpress.org finally restored my access. However, it is easier for me to maintain this plugin on my own server using GitHub for version control than to try to maintain two separate versions going forward.</p>
+            <h2>Please visit the plugin page on my site for more information and to download the latest supported free version of this plugin:</h2>
+            <p><a href="https://stephensherrardplugins.com/plugins/pta-volunteer-sign-up-sheets/" target="_blank">Free Volunteer Sign Up Sheets plugin at stephensherrardplugins.com</a> </p>
+            <p>Note that I have opened up the GitHub repo to the public for this plugin. So, you can always download the latest release from there if you know what you are doing and do not want to be registered with my site for automatic updates.<br/><a href="https://github.com/dbarproductions/pta-volunteer-sign-up-sheets">Volunteer Sign Up Sheets at GitHub</a> </p>
+        </div>
+		<?php
 	}
 
 } // End of Class

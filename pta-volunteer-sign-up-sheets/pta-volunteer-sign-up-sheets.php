@@ -3,7 +3,7 @@
 Plugin Name: Volunteer Sign Up Sheets
 Plugin URI: http://wordpress.org/plugins/pta-volunteer-sign-up-sheets
 Description: Volunteer Sign Up Sheets and Management from Stephen Sherrard Plugins
-Version: 5.5.0
+Version: 5.5.9
 Author: Stephen Sherrard
 Author URI: https://stephensherrardplugins.com
 License: GPLv2 or later
@@ -20,7 +20,7 @@ if (!defined('PTA_VOLUNTEER_SUS_VERSION_KEY'))
     define('PTA_VOLUNTEER_SUS_VERSION_KEY', 'pta_volunteer_sus_version');
 
 if (!defined('PTA_VOLUNTEER_SUS_VERSION_NUM'))
-    define('PTA_VOLUNTEER_SUS_VERSION_NUM', '5.5.0');
+    define('PTA_VOLUNTEER_SUS_VERSION_NUM', '5.5.9');
 
 if (!defined('PTA_VOLUNTEER_SUS_DIR'))
 	define('PTA_VOLUNTEER_SUS_DIR', plugin_dir_path( __FILE__ ) );
@@ -28,7 +28,13 @@ if (!defined('PTA_VOLUNTEER_SUS_DIR'))
 if (!defined('PTA_VOLUNTEER_SUS_URL'))
 	define('PTA_VOLUNTEER_SUS_URL', plugin_dir_url( __FILE__ ) );
 
+if ( !defined('SS_PLUGINS_PTA_VOLUNTEER_SUS_ID') )
+	define( 'SS_PLUGINS_PTA_VOLUNTEER_SUS_ID', 15066 );
+
 add_option(PTA_VOLUNTEER_SUS_VERSION_KEY, PTA_VOLUNTEER_SUS_VERSION_NUM);
+
+if ( !defined('SS_PLUGINS_URL') )
+	define( 'SS_PLUGINS_URL', 'https://stephensherrardplugins.com' );
 
 if (!class_exists('PTA_SUS_Data')) require_once 'classes/data.php';
 if (!class_exists('PTA_SUS_List_Table')) require_once 'classes/list-table.php';
@@ -63,6 +69,7 @@ class PTA_Sign_Up_Sheet {
 
 	    add_action('init', array($this, 'init'));
 	    add_action('plugins_loaded', array($this, 'public_init' ));
+	    add_action('plugins_loaded', array($this, 'setup_translation' ));
 
 	    add_action( 'init', array($this, 'block_assets' ));
 
@@ -82,6 +89,9 @@ class PTA_Sign_Up_Sheet {
 	    }
 	    if (!class_exists('PTA_SUS_Public')) {
 		    include_once(dirname(__FILE__).'/classes/class-pta_sus_public.php');
+			$this->public = new PTA_SUS_Public();
+		    add_action('init', array($this->public, 'init'));
+		    add_action('wp_enqueue_scripts', array($this->public, 'add_css_and_js_to_frontend'));
 	    }
     }
 
@@ -310,12 +320,16 @@ class PTA_Sign_Up_Sheet {
     	if(!is_admin() || wp_doing_ajax()) {
 		    if($this->public === null) {
 			    $this->public = new PTA_SUS_Public();
+				$this->public->init();
 		    }
 	    }
     }
 
+	public function setup_translation() {
+		load_plugin_textdomain( 'pta-volunteer-sign-up-sheets', false, dirname(plugin_basename( __FILE__ )) . '/languages/' );
+	}
+
     public function init() {
-        load_plugin_textdomain( 'pta-volunteer-sign-up-sheets', false, dirname(plugin_basename( __FILE__ )) . '/languages/' );
         // Check our database version and run the activate function if needed
         $current = get_option( "pta_sus_db_version" );
         if ($current < $this->db_version) {
@@ -808,12 +822,12 @@ Please click on, or copy and paste, the link below to validate yourself:
 		);
 
 		$instance = array(
-			'title' => $attributes['title'] ?? 'Current Volunteer Opportunities',
-			'num_items' => $attributes['num_items'] ?? 10,
-			'show_what' => $attributes['show_what'] ?? 'both',
-			'sort_by' => $attributes['sort_by'] ?? 'first_date',
-			'order' => $attributes['order'] ?? 'ASC',
-			'list_class' => $attributes['list_class'] ?? ''
+			'title' => sanitize_text_field($attributes['title']) ?? 'Current Volunteer Opportunities',
+			'num_items' => absint($attributes['num_items']) ?? 10,
+			'show_what' => sanitize_key($attributes['show_what']) ?? 'both',
+			'sort_by' => sanitize_key($attributes['sort_by']) ?? 'first_date',
+			'order' => sanitize_text_field($attributes['order']) ?? 'ASC',
+			'list_class' => sanitize_text_field($attributes['list_class']) ?? ''
 		);
 
 		ob_start();
@@ -840,24 +854,41 @@ Please click on, or copy and paste, the link below to validate yourself:
 
 }
 
-require_once(dirname(__FILE__).'/pta-sus-global-functions.php');
-require_once(dirname(__FILE__).'/classes/class-pta_sus_messages.php');
-require_once(dirname(__FILE__).'/classes/class-pta_sus_template_tags.php');
-require_once(dirname(__FILE__).'/classes/class-pta_sus_template_tags_helper.php');
-require_once(dirname(__FILE__).'/classes/class-pta_sus_volunteer.php');
-require_once(dirname(__FILE__).'/classes/class-pta_sus_signup_functions.php');
-require_once(dirname(__FILE__).'/classes/class-pta_sus_text_registry.php');
+function pta_sus_load_plugin_components() {
+	// Load global functions first (if they don't use translations)
+	require_once(dirname(__FILE__).'/pta-sus-global-functions.php');
+
+	// Now load classes that might use translations
+	require_once(dirname(__FILE__).'/classes/class-pta_sus_messages.php');
+	require_once(dirname(__FILE__).'/classes/class-pta_sus_template_tags.php');
+	require_once(dirname(__FILE__).'/classes/class-pta_sus_template_tags_helper.php');
+	require_once(dirname(__FILE__).'/classes/class-pta_sus_volunteer.php');
+	require_once(dirname(__FILE__).'/classes/class-pta_sus_signup_functions.php');
+	require_once(dirname(__FILE__).'/classes/class-pta_sus_text_registry.php');
+
+	// Initialize template tags after translations are loaded
+	PTA_SUS_Template_Tags_Helper::setup();
+	PTA_SUS_Text_Registry::setup();
+}
+add_action('plugins_loaded', 'pta_sus_load_plugin_components', 5); // Priority 5 to run before other plugins_loaded hooks
 
 global $pta_sus;
 $pta_sus = new PTA_Sign_Up_Sheet();
-$pta_sus->init_hooks();
-require_once(dirname(__FILE__).'/classes/class-pta-sus-ajax.php');
+// Hook initialization to plugins_loaded with a later priority
+add_action('plugins_loaded', array($pta_sus, 'init_hooks'), 10); // After components are loaded
+
+// Move the AJAX class loading to plugins_loaded too
+add_action('plugins_loaded', function() {
+	require_once(dirname(__FILE__).'/classes/class-pta-sus-ajax.php');
+}, 15);
 
 endif; // class exists
 
 $pta_vol_sus_plugin_file = 'pta-volunteer-sign-up-sheets/pta-volunteer-sign-up-sheets.php';
 add_filter( "plugin_action_links_{$pta_vol_sus_plugin_file}", 'pta_vol_sus_plugin_action_links', 10, 2 );
 function pta_vol_sus_plugin_action_links( $links, $file ) {
+	$update_link = '<a href="https://stephensherrardplugins.com/plugins/pta-volunteer-sign-up-sheets/">' . __( 'UPDATE to Latest Version', 'pta-volunteer-sign-up-sheets' ) . '</a>';
+	array_unshift( $links, $update_link );
     $extensions_link = '<a href="https://stephensherrardplugins.com">' . __( 'Extensions', 'pta-volunteer-sign-up-sheets' ) . '</a>';
     array_unshift( $links, $extensions_link );
     $docs_link = '<a href="https://stephensherrardplugins.com/docs/pta-volunteer-sign-up-sheets-documentation/">' . __( 'Docs', 'pta-volunteer-sign-up-sheets' ) . '</a>';
@@ -960,4 +991,34 @@ function pta_sus_user_data_eraser( $email_address, $page = 1 ) {
 		'done'           => true,
 	);
 }
+// Admin dismissable notice with permanent hide option
+add_action('admin_notices', function() {
+    if (!current_user_can('manage_options')) return;
+    if (get_option('pta_sus_hide_admin_notice')) return;
+    $dismiss_url = wp_nonce_url(
+        add_query_arg('pta_sus_dismiss_notice', '1'),
+        'pta_sus_dismiss_notice',
+        'pta_sus_notice_nonce'
+    );
+    echo '<div class="notice notice-warning is-dismissible"><p>';
+    echo '<strong>'.__('IMPORTANT! The wordpress.org version of the Volunteer Sign Up Sheets is no longer supported!', 'pta-volunteer-sign-up-sheets') . '</strong><br/>';
+	echo __('Visit <a href="https://stephensherrardplugins.com/plugins/pta-volunteer-sign-up-sheets/" target="_blank">https://stephensherrardplugins.com/plugins/pta-volunteer-sign-up-sheets</a> for more info and to download the latest free version.', 'pta-volunteer-sign-up-sheets') . ' ';
+    echo '<a href="' . esc_url($dismiss_url) . '">' . __('Dismiss and never show again', 'pta-volunteer-sign-up-sheets') . '</a>';
+    echo '</p></div>';
+});
+
+add_action('admin_init', function() {
+    if (
+        isset($_GET['pta_sus_dismiss_notice']) &&
+        $_GET['pta_sus_dismiss_notice'] === '1' &&
+        isset($_GET['pta_sus_notice_nonce']) &&
+        wp_verify_nonce($_GET['pta_sus_notice_nonce'], 'pta_sus_dismiss_notice') &&
+        current_user_can('manage_options')
+    ) {
+        update_option('pta_sus_hide_admin_notice', 1);
+        wp_safe_redirect(remove_query_arg(['pta_sus_dismiss_notice', 'pta_sus_notice_nonce']));
+        exit;
+    }
+});
+
 /* EOF */

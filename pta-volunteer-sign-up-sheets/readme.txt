@@ -4,14 +4,19 @@ Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_i
 Tags: Volunteer, Volunteers, Sign Up, Signup, Events
 Requires at least: 6.0
 Requires PHP: 7.4
-Tested up to: 6.7.2
+Tested up to: 6.8.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
-Stable tag: trunk
+Stable tag: 5.5.9
 
 Easily create and manage sign-up sheets for activities and events, while protecting the privacy of the volunteers' personal information.
 
 == Description ==
+**IMPORTANT!! This wordpress.org version is NO LONGER SUPPORTED!**
+The wordpress.org SVN repo was corrupted in February 2025, and I was locked out from releasing updates for more than 6 months.
+I have moved the plugin, which remains free, to my own server, as well as making it publicly available on GitHub, and am using my own updater system for automatic updates. It's much easier to maintain and update on my own server using GitHub than it is with the wordpress.org SVN system.
+Please visit the following link for more info and to download the latest stable version.
+<https://stephensherrardplugins.com/plugins/pta-volunteer-sign-up-sheets/>
 
 **PLEASE DO NOT USE THE SUPPORT FORUM FOR FEATURE REQUESTS!!**
 You may submit new features here:
@@ -40,7 +45,7 @@ Read the documentation here:
 *   You can optionally enter a description for each task (in addition to the main content area for the whole sheet) that will be shown above the task signup table for each task (when not empty)
 *	The ability to allow duplicate signups on a per task basis, changing the label for the item details form field on a per task/item basis, as well as allowing volunteers to specify quantities on a per task/item basis.
 *   Easily create volunteer sign-up sheets with multiple tasks/items for each
-*	Supports Single, Recurring, Ongoing or Multi-Day Events
+*	Supports Single, Recurring, Ongoing, or Multi-Day Events
 *  	All Sheets can be hidden from the public (visible only to logged in users)
 *   No volunteer contact info is shown to the public (emails and phone are always hidden). Default public view shows only first name and last name for filled spots, but you can optionally show the full name, and there is also an option to simply show "Filled" for filled spots.
 *   Hidden spambot field helps prevent automatic spambot form submissions
@@ -76,7 +81,7 @@ Use the Sign Up Sheets block, or the [pta_sign_up_sheet] shortcode, for a main s
 
 There is an Upcoming Event block, and sidebar widget, to show upcoming volunteer events and how many spots still need to be filled for each, linked to each individual sign-up sheet. You can choose whether to show Ongoing type events in the widget, and if they should be at the top or bottom of the list (since they don't have dates associated with them).
 
-Admin users can view sign-ups for each sheet, and add, edit, or clear any spots with a simple link. Each sheet can also be exported to Excel, CSV, PDF or Print formats. Admin side signups are displayed using the jQuery DataTables plugin, which allows sorting, filtering, searching, and showing/hiding columns, so you can arrange the data anyway you want before exporting or printing.
+Admin users can view sign-ups for each sheet, and add, edit, or clear any spots with a simple link. Each sheet can also be exported to Excel, CSV, PDF, or Print formats. Admin side signups are displayed using the jQuery DataTables plugin, which allows sorting, filtering, searching, and showing/hiding columns, so you can arrange the data anyway you want before exporting or printing.
 
 Committee/Event contact info can be entered for each sheet, or, if you are using the PTA Member Directory plugin, you can select one of the positions from the directory as the contact. When a user signs up, a confirmation email is sent to the user as well as a notification email to the contacts for that event (can be optionally disabled).
 
@@ -162,6 +167,36 @@ This alone will not make your site GDPR compliant. You will need to study up on 
 If your site is going to be affected by GDPR, then you should contact a lawyer to make sure you do everything needed to be in compliance.
 
 == Changelog ==
+**Version 5.5.9**
+*   LAST RELEASE AT wordpress.org. The wordpress.org version is NO LONGER SUPPORTED due to a corrupted SVN and being locked out for over 6 months while not being able to release updates there
+*   Visit https://stephensherrardplugins.com/plugins/pta-volunteer-sign-up-sheets/ for more info and to download the latest stable release!
+*   Contains several small bug fixes and a minor security patch.
+*   Tested with PHP 8.4.11 and WordPress 6.8.2
+
+**Version 5.5.5**
+*   Properly sanitize/escape values in the Upcoming Events widget.
+*   Rework the loading of classes to prevent PHP notices of the translation text domains being loaded too early
+*   CSS fix for sheet header row when using the Divs display option
+*   Fix signup form validation to allow the number zero ("0") to be entered in item details field when the field is required.
+*   Added updater function to serve updates from the public GitHub repository. Updates will no longer be available from the WordPress plugin repository.
+*   Tested with PHP 8.4.7 and WordPress 6.8.1
+
+**Version 5.5.4**
+*   Added hooks and parameter to the add signup function to allow extensions to bypass the redirect function after a signup is processed
+*   Tested with PHP 8.4.5 and WordPress 6.7.2
+
+**Version 5.5.3**
+*   Remove extraneous div closing tag that was messing up the User Signups List display when using Divs instead of tables.
+*   Tested with PHP 8.4.5 and WordPress 6.7.2
+
+**Version 5.5.2**
+*   Update for the data class add_signup function to work better with the Waitlists extension.
+*   Tested with PHP 8.4.2 and WordPress 6.7.2
+
+**Version 5.5.1**
+*   Fixed typo in the closing "tbody" tag in the signup sheet tables template that could affect the display of Multi-day or Recurring sheets with some themes.
+*   Tested with PHP 8.4.2 and WordPress 6.7.2
+
 **Version 5.5.0**
 *   Added new template tags for emails.
 *   Refactored template tag class to use separate functions for signup, task, and sheet tags, making it easier for extensions to utilize for specific objects.

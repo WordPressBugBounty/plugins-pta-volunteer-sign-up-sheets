@@ -47,6 +47,20 @@ class PTA_SUS_Template_Tags {
 		return $names;
 	}
 
+	public static function get_member_directory_emails($group='') {
+		$args = array( 'post_type' => 'member', 'member_category' => $group );
+		$members = get_posts( $args );
+		if(!$members) return false;
+		$emails = array();
+		foreach ($members as $member) {
+			if (is_email( esc_html( $email = get_post_meta( $member->ID, '_pta_member_directory_email', true ) ) )) {
+				$emails[] = $email;
+			}
+		}
+		if(0 == count($emails)) return false;
+		return $emails;
+	}
+
 	public static function get_signup_tags($signup) {
 		if(empty($signup)) {
 			return array();
@@ -76,7 +90,7 @@ class PTA_SUS_Template_Tags {
 		);
 	}
 
-	public static function get_task_tags($task) {
+	public static function get_task_tags($task, $date='') {
 		if(empty($task)) {
 			return array();
 		}
@@ -88,6 +102,17 @@ class PTA_SUS_Template_Tags {
 		$task_open_spots = $pta_sus->data->get_available_qty($task->id, '', $task->qty);
 		$task_filled_spots = $task->qty - $task_open_spots;
 
+		// try to get the task date if not passed in
+		if(empty($date)) {
+			$dates = explode(',', $task->dates);
+			foreach($dates as $task_date) {
+				if(!empty($date)) {
+					$date .= ', ';
+				}
+				$date .= pta_datetime(get_option('date_format'), strtotime($task_date));
+			}
+		}
+
 		return array(
 			'{task_title}' => $task->title,
 			'{task_description}' => $task->description,
@@ -97,7 +122,8 @@ class PTA_SUS_Template_Tags {
 			'{task_start_time}' => $start_time,
 			'{end_time}' => $end_time,
 			'{task_end_time}' => $end_time,
-			'{details_text}' => $task->details_text
+			'{details_text}' => $task->details_text,
+			'{task_date}' => $date,
 		);
 	}
 
@@ -115,7 +141,12 @@ class PTA_SUS_Template_Tags {
 		$sheet_filled_spots = $pta_sus->data->get_sheet_signup_count($sheet->id);
 		$sheet_open_spots = $sheet_total_spots - $sheet_filled_spots;
 
-		$chair_emails = !empty($sheet->chair_email) ? explode(',', $sheet->chair_email) : array();
+
+		if (isset($sheet->position) && '' != $sheet->position) {
+			$chair_emails = self::get_member_directory_emails($sheet->position);
+		} else {
+			$chair_emails = !empty($sheet->chair_email) ? explode(',', $sheet->chair_email) : array();
+		}
 		$contact_emails = !empty($chair_emails) ? implode("\r\n", $chair_emails) : __('N/A', 'pta-volunteer-sign-up-sheets');
 
 		$chair_names = '';
@@ -170,7 +201,7 @@ class PTA_SUS_Template_Tags {
 			// Get associated task and its tags
 			$task = $pta_sus->get_task($signup->task_id);
 			if(!empty($task)) {
-				self::$tags = array_merge(self::$tags, self::get_task_tags($task));
+				self::$tags = array_merge(self::$tags, self::get_task_tags($task,$signup->date));
 
 				// Get associated sheet and its tags
 				$sheet = $pta_sus->get_sheet($task->sheet_id);
